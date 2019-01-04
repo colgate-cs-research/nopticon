@@ -28,12 +28,15 @@ def check_reachability(policy, summary):
 def main():
     # Parse arguments
     arg_parser = ArgumentParser(description='Check whether intents appear in a network summary')
-    arg_parser.add_argument('-summary', dest='summary_path', action='store',
-            required=True, help='Path to summary JSON file')
-    arg_parser.add_argument('-policies', dest='policies_path', action='store',
-            required=True, help='Path to policies JSON file')
-    arg_parser.add_argument('-extras', dest='extras', action='store_true',
+    arg_parser.add_argument('-s','--summary', dest='summary_path', 
+            action='store', required=True, help='Path to summary JSON file')
+    arg_parser.add_argument('-p','--policies', dest='policies_path', 
+            action='store', required=True, help='Path to policies JSON file')
+    arg_parser.add_argument('-e','--extras', dest='extras', action='store_true',
             help='Output edges that do not correspond to any policies')
+    arg_parser.add_argument('-c', '--coerce', dest='coerce', 
+            action='store_true',
+            help='Coerce path-preference policies to reachability policies')
     settings = arg_parser.parse_args()
 
     # Load summary
@@ -47,11 +50,13 @@ def main():
     policies = nopticon.parse_policies(policies_json)
 
     # Coerce path preference policies to reachability policy
-    for idx, policy in enumerate(policies):
-        if policy.isType(nopticon.PolicyType.PATH_PREFERENCE):
-            policies[idx] = nopticon.ReachabilityPolicy({'flow' : policy._flow,
-                    'source' : policy._paths[0][0],
-                    'target' : policy._paths[0][-1]})
+    if (settings.coerce):
+        for idx, policy in enumerate(policies):
+            if policy.isType(nopticon.PolicyType.PATH_PREFERENCE):
+                policies[idx] = nopticon.ReachabilityPolicy(
+                        {'flow' : policy._flow,
+                        'source' : policy._paths[0][0],
+                        'target' : policy._paths[0][-1]})
 
     # Check policies
     for policy in policies:
