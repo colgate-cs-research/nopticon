@@ -15,7 +15,7 @@ def get_edge_rank(summary, flow, edge):
     if (rank is None):
         return (0, math.inf)
     edges = summary.get_edges(flow)
-    ranks = sorted(set([details['rank-0'] for details in edges.values()]), 
+    ranks = sorted(set([summary.get_edge_rank(flow, edge) for edge in edges.keys()]), 
             reverse=True)
     flow_rank = ranks.index(rank) + 1
     flow_percentile = flow_rank/len(ranks) * 100
@@ -28,13 +28,13 @@ def check_reachability(policy, summary):
 def main():
     # Parse arguments
     arg_parser = ArgumentParser(description='Check whether intents appear in a network summary')
-    arg_parser.add_argument('-s','--summary', dest='summary_path', 
+    arg_parser.add_argument('-s','--summary', dest='summary_path',
             action='store', required=True, help='Path to summary JSON file')
-    arg_parser.add_argument('-p','--policies', dest='policies_path', 
+    arg_parser.add_argument('-p','--policies', dest='policies_path',
             action='store', required=True, help='Path to policies JSON file')
     arg_parser.add_argument('-e','--extras', dest='extras', action='store_true',
             help='Output edges that do not correspond to any policies')
-    arg_parser.add_argument('-c', '--coerce', dest='coerce', 
+    arg_parser.add_argument('-c', '--coerce', dest='coerce',
             action='store_true',
             help='Coerce path-preference policies to reachability policies')
     settings = arg_parser.parse_args()
@@ -62,7 +62,7 @@ def main():
     for policy in policies:
         if policy.isType(nopticon.PolicyType.REACHABILITY):
             reach_result = check_reachability(policy, summary)
-            print('Policy %s %f %d %f' % (policy, reach_result[0], 
+            print('Policy %s %f %d %f' % (policy, reach_result[0],
                 reach_result[1], reach_result[2]))
 
     # Check for extra edges
@@ -80,7 +80,7 @@ def main():
             for edge in summary.get_edges(flow):
                 if edge not in policy_edges[flow]:
                     rank_result = get_edge_rank(summary, flow, edge)
-                    print('Extra %s %s->%s %f %d %f' % (flow, edge[0], edge[1], 
+                    print('Extra %s %s->%s %f %d %f' % (flow, edge[0], edge[1],
                         rank_result[0], rank_result[1], rank_result[2]))
 
 if __name__ == '__main__':
