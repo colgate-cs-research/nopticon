@@ -1,5 +1,5 @@
 """
-Python classes for Nopticon 
+Python classes for Nopticon
 """
 
 from enum import Enum
@@ -7,7 +7,7 @@ import ipaddress
 import json
 
 class ReachSummary:
-    def __init__(self, summary_json, sigfigs):
+    def __init__(self, summary_json, sigfigs=8):
         self._summary = json.loads(summary_json)
         self._sigfigs = sigfigs
 
@@ -130,7 +130,7 @@ class ReachabilityPolicy(Policy):
         return hash((self._flow, self._source, self._target))
 
     def __eq__(self, other):
-        return ((self._flow, self._source, self._target) 
+        return ((self._flow, self._source, self._target)
                 == (other._flow, other._source, other._target))
 
 class PathPreferencePolicy(Policy):
@@ -142,11 +142,11 @@ class PathPreferencePolicy(Policy):
                 path[i] = path[i][:10]
 
     def toReachabilityPolicy(self):
-        return ReachabilityPolicy({'flow' : self._flow, 
+        return ReachabilityPolicy({'flow' : self._flow,
             'source' : self._paths[0][0], 'target' : self._paths[0][-1]})
 
     def __str__(self):
-        return '%s %s' % (self._flow, 
+        return '%s %s' % (self._flow,
                 ' > '.join(['->'.join(path) for path in self._paths]))
 
 """Convert rdns JSON to a dictionary of IPs to router names"""
@@ -158,4 +158,3 @@ def parse_rdns(rdns_json):
         for iface_ip in router_dict['ifaces']:
             rdns[ipaddress.ip_address(iface_ip)] = name
     return rdns
-
