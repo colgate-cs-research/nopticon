@@ -15,7 +15,7 @@ def get_edge_rank(summary, flow, edge):
     if (rank is None):
         return (0, math.inf)
     edges = summary.get_edges(flow)
-    ranks = sorted(set([summary.get_edge_rank(flow, edge) for edge in edges.keys()]), 
+    ranks = sorted(set([summary.get_edge_rank(flow, edge) for edge in edges.keys()]),
             reverse=True)
     flow_rank = ranks.index(rank) + 1
     flow_percentile = flow_rank/len(ranks) * 100
@@ -37,7 +37,14 @@ def main():
     arg_parser.add_argument('-c', '--coerce', dest='coerce',
             action='store_true',
             help='Coerce path-preference policies to reachability policies')
+    arg_parser.add_argument('-t', '--threshold', default=0.5, type=float, required=False,
+                        help='The minimum rank to consider between 0 and 1')
     settings = arg_parser.parse_args()
+    num_satisfied = 0
+
+    if settings.threshold > 1:
+        print("Threshold must be between 0 and 1")
+        return 1
 
     # Load summary
     with open(settings.summary_path, 'r') as sf:
@@ -62,8 +69,15 @@ def main():
     for policy in policies:
         if policy.isType(nopticon.PolicyType.REACHABILITY):
             reach_result = check_reachability(policy, summary)
-            print('Policy %s %f %d %f' % (policy, reach_result[0],
-                reach_result[1], reach_result[2]))
+            if (reach_result[0] > settings.threshold):
+                satisfied = 'satisfied'
+                num_satisfied += 1
+            else:
+                satisfied = 'unsatisfied'
+            print('Policy %s %f %d %f %s' % (policy, reach_result[0],
+                reach_result[1], reach_result[2], satisfied))
+    # Indicate how many policies were found
+    print('%d out of %d policies were found.' % (num_satisfied, len(policies)))
 
     # Check for extra edges
     if (settings.extras):
