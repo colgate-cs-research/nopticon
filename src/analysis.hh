@@ -65,6 +65,9 @@ public:
 
   bool request_stop = false;
 
+  /// Was an edge ever non-transitive?
+  bool can_be_direct = false;
+
   /// Mark the time at which a property starts to hold
   void start(timestamp_t);
 
