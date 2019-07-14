@@ -238,9 +238,6 @@ void path_preference_summary_t::link_down(nid_t s, nid_t t, timestamp_t timestam
 }
 
 path_timestamps_t path_preference_summary_t::get_path_timestamps() const {
-  auto link_timestamps = [&](nid_t s, nid_t t) {
-    return m_link_history_vec.at(make_index(s, t)).timestamps(global_stop);
-  };
   path_timestamps_t result;
   for (auto& path_history : m_route_history) {
     for (auto& kv : path_history) {

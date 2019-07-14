@@ -67,6 +67,8 @@ private:
   void print_flows(writer_t &, const nopticon::affected_flows_t &) const;
   void print_flow(writer_t &, const nopticon::const_flow_t) const;
 
+  void print_link_history(writer_t &, const nopticon::path_preference_summary_t &) const;
+
   void print_errors(writer_t &, const nopticon::loops_per_flow_t &) const;
 
   void print_reach_summary(writer_t &, const nopticon::flow_tree_t &,
@@ -303,6 +305,36 @@ void log_t::print_path_preferences(
   writer.EndArray();
 }
 
+void log_t::print_link_history(writer_t &writer,
+    const nopticon::path_preference_summary_t &path_preference_summary) const {
+  writer.Key("link-history");
+  writer.StartArray();
+  for (nopticon::nid_t s = 0; s < m_nid_to_name.size(); ++s) {
+    for (nopticon::nid_t t = 0; t < m_nid_to_name.size(); ++t) {
+      if (s == t) {
+        continue;
+      }
+      auto link_timestamps = path_preference_summary.link_timestamps(s, t);
+      if (link_timestamps.empty()) {
+        continue;
+      }
+      writer.StartObject();
+      writer.Key("source");
+      print_nid(writer, s);
+      writer.Key("target");
+      print_nid(writer, t);
+      writer.Key("history");
+      writer.StartArray();
+      for (auto timestamp : link_timestamps) {
+        writer.Uint64(timestamp);
+      }
+      writer.EndArray();
+      writer.EndObject();
+    }
+  }
+  writer.EndArray();
+}
+
 void log_t::print_errors(
     writer_t &writer, const nopticon::loops_per_flow_t &loops_per_flow) const {
   bool is_empty = true;
@@ -354,11 +386,14 @@ void log_t::print(const nopticon::analysis_t &analysis) {
     }
     writer.EndArray();
   }
-  if (m_opt_verbosity >= 9) {
+  if (m_opt_verbosity >= 11) {
     print_path_preferences(writer, analysis.flow_graph().flow_tree(),
                              analysis.path_preferences());
   }
   if (not m_opt_reach_summary_spans.empty()) {
+    if (m_opt_verbosity >= 9) {
+      print_link_history(writer, analysis.path_preference_summary());
+    }
     if (m_opt_verbosity >= 7) {
       print_reach_summary(writer, analysis.flow_graph().flow_tree(),
                             analysis.reach_summary());
@@ -632,16 +667,18 @@ static const char *const s_usage =
     "  --verbosity VERBOSITY\n"
     "  \tAdjust the details included in the log where\n"
     "  \tVERBOSITY (from low to high) is as follows:\n"
-    "  \t0 - perform analysis but produce no output\n"
-    "  \t1 - BMP messages that cause forwarding loops\n"
-    "  \t4 - ... and information about affected flows\n"
-    "  \t5 - ... and network summary for affected flows\n"
-    "  \t    (requires --reach-summary SPANS option)\n"
-    "  \t6 - ... and information about all flows\n"
-    "  \t7 - ... and network summary for all flows\n"
-    "  \t    (requires --reach-summary SPANS option)\n"
-    "  \t8 - ... and history of each inferred property\n"
-    "  \t9 - ... and path preferences\n";
+    "  \t0  - perform analysis but produce no output\n"
+    "  \t1  - BMP messages that cause forwarding loops\n"
+    "  \t4  - ... and information about affected flows\n"
+    "  \t5  - ... and network summary for affected flows\n"
+    "  \t     (requires --reach-summary SPANS option)\n"
+    "  \t6  - ... and information about all flows\n"
+    "  \t7  - ... and network summary for all flows\n"
+    "  \t     (requires --reach-summary SPANS option)\n"
+    "  \t8  - ... and history of each inferred property\n"
+    "  \t9  - ... and link history\n"
+    "  \t     (requires --reach-summary SPANS option)\n"
+    "  \t11 - ... and path preferences\n";
 
 void print_usage() { std::cerr << s_usage; }
 

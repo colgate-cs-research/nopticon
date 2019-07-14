@@ -208,6 +208,11 @@ public:
 
   /// \internal Use for testing only
   path_timestamps_t get_path_timestamps() const;
+
+  timestamps_t link_timestamps(nid_t s, nid_t t) const {
+    return m_link_history_vec.at(make_index(s, t)).timestamps(global_stop);
+  }
+
 private:
   const std::size_t m_number_of_nodes;
   history_vec_t m_link_history_vec;
@@ -258,7 +263,10 @@ public:
     return m_path_preference_summary.path_preferences();
   }
 
-  /// \internal Use for testing only
+  timestamps_t link_timestamps(nid_t s, nid_t t) const {
+    return m_path_preference_summary.link_timestamps(s, t);
+  }
+
   const path_preference_summary_t &path_preference_summary() const noexcept {
     return m_path_preference_summary;
   }
