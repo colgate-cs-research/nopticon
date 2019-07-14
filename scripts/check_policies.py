@@ -42,7 +42,7 @@ def main():
     settings = arg_parser.parse_args()
     num_satisfied = 0
 
-    if settings.threshold > 1:
+    if settings.threshold < 0 or settings.threshold > 1:
         print("Threshold must be between 0 and 1")
         return 1
 
