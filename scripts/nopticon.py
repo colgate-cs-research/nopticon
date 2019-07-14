@@ -1,5 +1,5 @@
 """
-Python classes for Nopticon 
+Python classes for Nopticon
 """
 
 from enum import Enum
@@ -269,7 +269,7 @@ class ReachabilityPolicy(Policy):
         return hash((self._flow, self._source, self._target))
 
     def __eq__(self, other):
-        return ((self._flow, self._source, self._target) 
+        return ((self._flow, self._source, self._target)
                 == (other._flow, other._source, other._target))
 
 class PathPreferencePolicy(Policy):
@@ -284,15 +284,15 @@ class PathPreferencePolicy(Policy):
         waypoints = set(self._paths[0])
         for p in self._paths:
             waypoints = waypoints.intersection(set(p))
-
+        # FIXME: Ensure backward compatability
         return [ReachabilityPolicy({'flow' : self._flow, 
                                     'source' : self._paths[0][0], 'target' : self._paths[0][-1]})] # + \
-                                    # [ReachabilityPolicy({'flow' : self._flow, 'source': self._paths[0][0],
-                                    #                      'target': w}) for w in waypoints] + \
-                                    #                     [ReachabilityPolicy({'flow' : self._flow,
-                                    #                                          'source': n,
-                                    #                                          'target': self._paths[0][-1]})
-                                    #                      for n in waypoints ]
+    # [ReachabilityPolicy({'flow' : self._flow, 'source': self._paths[0][0],
+    #                      'target': w}) for w in waypoints] + \
+    #                     [ReachabilityPolicy({'flow' : self._flow,
+    #                                          'source': n,
+    #                                          'target': self._paths[0][-1]})
+    #                      for n in waypoints ]
 
     def toImplConsequences(self):
         return  [ReachabilityPolicy({'flow' : self._flow,
@@ -333,7 +333,7 @@ class PathPreferencePolicy(Policy):
             
     
     def __str__(self):
-        return '%s %s' % (self._flow, 
+        return '%s %s' % (self._flow,
                 ' > '.join(['->'.join(path) for path in self._paths]))
 
 """Convert rdns JSON to a dictionary of IPs to router names"""
@@ -345,4 +345,3 @@ def parse_rdns(rdns_json):
         for iface_ip in router_dict['ifaces']:
             rdns[ipaddress.ip_address(iface_ip)] = name
     return rdns
-
