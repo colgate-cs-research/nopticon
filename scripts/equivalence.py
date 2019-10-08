@@ -19,8 +19,6 @@ def height(succ, node, memo, gas = 200):
         else:
             memo[node] = 0
     return memo[node]
-    
-
 
 def loop_free(succ):
     searched = set()
@@ -49,7 +47,6 @@ def loop_free(succ):
         
     return True            
     
-
 def compute_flow_NECs(edges):
     adj = { source: set([ target for src, target in edges
                           if src == source])
@@ -112,7 +109,7 @@ def main():
         
     with open(settings.summary) as reach_fp:
         rs = nopticon.ReachSummary(reach_fp.read(), settings.sigfigs)
-    
+
     if settings.threshold is None:
         gNEC_outputs = []
         data = [] #list of pairs of thresholds and gNEC indexes from gNEC_outputs

@@ -149,8 +149,6 @@ def main():
             correct_policies += 1
             # print("%s %s" % (p, valid))
 
-    
-
     if settings.cluster_threshold is not None:
         print(settings.cluster_threshold, (correct_policies/len(all_prop)), (correct_policies/(len(policies))))
     else :
