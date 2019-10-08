@@ -4,6 +4,84 @@ from itertools import combinations
 from nopticon import ReachSummary, PolicyType, parse_policies
 from argparse import ArgumentParser
 
+class EnhancedReachSummary(nopticon.ReachSummary):
+    def __init__(self, summary_json, sigfigs):
+        super().__init__(summary_json, sigfigs)
+
+    def to_policy_set(self, show_implied=False, flow_str=None, threshold=0):
+        policies = set()
+        for flow in self.get_flows():
+            if flow_str is not None and str(flow) != flow_str:
+                continue
+            for edge in self.get_edges(flow):
+                is_implied = self.edge_is_implied(flow, edge)
+                rank = self.get_edge_rank(flow,edge)
+                if rank >= threshold:
+                    if (show_implied and is_implied) or not is_implied:
+                        policies.add(ReachabilityPolicy({
+                            'flow' : flow,
+                            'source': edge[0],
+                            'target': edge[1]
+                        }))
+        return policies
+
+    def is_insight(self,flow, edge, cluster=False, threshold=None, implied=False):
+        if cluster and not self.is_cluster_accepted(flow, edge):
+            return False
+
+        if threshold is not None and not self.is_above_threshold(threshold, flow, edge):
+            return False
+
+        if implied and self.edge_is_implied(flow,edge):
+            # print("IMPLIED:", flow, edge)
+            return False
+
+        return True
+
+    def clear(self):
+        for flow,edge in self.get_flowedges():
+            edge_data = self.get_edges(flow)[edge]
+            if 'T' in edge_data:
+                del edge_data['T']
+
+            if 'C' in edge_data:
+                del edge_data['C']
+
+            if 'implied_by' in edge_data:
+                del edge_data['implied_by']
+        return
+
+    def mark_above_threshold(self, t, flow, edge):
+        self.get_edges(flow)[edge]['T'] = t
+
+    def is_above_threshold(self, t, flow, edge):
+        return 'T' in self.get_edges(flow)[edge] and\
+            (t is None or self.get_edges(flow)[edge]['T'] >= t)
+
+    def mark_cluster_accepted(self, flow, edge):
+        self.get_edges(flow)[edge]['C'] = True
+
+    def is_cluster_accepted(self, flow, edge):
+        edgedata = self.get_edges(flow)[edge]
+        return 'C' in edgedata and edgedata['C']
+
+    def mark_edge_implied_by(self, flow, premise, conclusion):
+        if conclusion in self.get_edges(flow):
+            # the conclusion is implied by EACH if the contents of the implied_by list
+            if 'implied_by' in self.get_edges(flow)[conclusion]:
+                self.get_edges(flow)[conclusion]['implied_by'].append(list(premise))
+            else:
+                self.get_edges(flow)[conclusion]['implied_by'] = [list(premise)]
+            # print("\t",premise, "==>", conclusion)
+            return True
+        else:
+            return False
+
+    def edge_is_implied(self, flow, edge):
+        return edge in self.get_edges(flow)\
+            and 'implied_by' in self.get_edges(flow)[edge]\
+            and len(self.get_edges(flow)[edge]['implied_by']) > 0
+
 class Topo:
     def __init__(self, topo_str):
         self._links = {}
@@ -273,7 +351,7 @@ def main():
         print("ERROR: Could not read from", settings.summary)
         return 1
 
-    reach_summ = ReachSummary(reach_str, 2)
+    reach_summ = EnhancedReachSummary(reach_str, 2)
     
     topo_str = None
     with open(settings.topo) as topo_fp:
