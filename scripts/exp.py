@@ -382,7 +382,7 @@ def main():
         for idx, policy in enumerate(simple_policies):
             if policy.isType(nopticon.PolicyType.PATH_PREFERENCE):
                 coerced_policies = policy.toReachabilityPolicy() + coerced_policies
-                artefacts = policy.toImplConsequences() + artefacts
+                artefacts = policy.toImpliedReachabilityPolicies() + artefacts
                 pref_policies.append(policy)
             else:
                 coerced_policies.append(policy)

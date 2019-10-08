@@ -62,7 +62,7 @@ class ReachSummary:
         if flow not in self._edges:
             return {}
         return self._edges[flow]
-    
+
     def get_edge_rank(self, flow, edge):
         if edge not in self.get_edges(flow):
             return None
@@ -264,30 +264,29 @@ class PathPreferencePolicy(Policy):
                 path[i] = path[i][:10]
 
     def toReachabilityPolicy(self):
-        waypoints = set(self._paths[0])
-        for p in self._paths:
-            waypoints = waypoints.intersection(set(p))
-        # FIXME: Ensure backward compatability
-        return [ReachabilityPolicy({'flow' : self._flow, 
-                                    'source' : self._paths[0][0], 'target' : self._paths[0][-1]})] # + \
-    # [ReachabilityPolicy({'flow' : self._flow, 'source': self._paths[0][0],
-    #                      'target': w}) for w in waypoints] + \
-    #                     [ReachabilityPolicy({'flow' : self._flow,
-    #                                          'source': n,
-    #                                          'target': self._paths[0][-1]})
-    #                      for n in waypoints ]
+        return ReachabilityPolicy({'flow' : self._flow,
+                'source' : self._paths[0][0], 'target' : self._paths[0][-1]})
 
-    def toImplConsequences(self):
-        return  [ReachabilityPolicy({'flow' : self._flow,
-                                     'source': n,
-                                     'target': m})
-                 for p in self._paths
-                 for i,n in enumerate(p)
-                 for m in p[i+1:]] 
+    def toImpliedReachabilityPolicies(self, waypoints_only=False):
+        if (waypoints_only):
+            waypoints = set(self._paths[0])
+            for p in self._paths:
+                waypoints = waypoints.intersection(set(p))
+            return [ReachabilityPolicy({'flow' : self._flow, 
+                    'source': self._paths[0][0],
+                    'target': w}) for w in waypoints] + \
+                    [ReachabilityPolicy({'flow' : self._flow,
+                    'source': w,
+                    'target': self._paths[0][-1]}) for w in waypoints]
+        else:
+            return  [ReachabilityPolicy({'flow' : self._flow,
+                                        'source': n,
+                                        'target': m})
+                    for p in self._paths
+                    for i,n in enumerate(p)
+                    for m in p[i+1:]] 
 
-
-
-    def __eq__(self,other):
+    def __eq__(self, other):
         if self._flow != other._flow:
             return False
         
@@ -308,12 +307,6 @@ class PathPreferencePolicy(Policy):
                 return False
 
         return True
-            
-                
-                    
-                
-            
-            
     
     def __str__(self):
         return '%s %s' % (self._flow,

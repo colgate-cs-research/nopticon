@@ -263,7 +263,7 @@ def main():
         policies = []
         for idx, policy in enumerate(s_policies):
             if policy.isType(PolicyType.PATH_PREFERENCE):
-                policies += policy.toReachabilityPolicy()
+                policies += [policy.toReachabilityPolicy()]
                 
     reach_str = None
     with open(settings.summary) as reach_fp:
