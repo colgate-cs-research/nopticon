@@ -106,7 +106,7 @@ def main():
     settings = parser.parse_args()
 
     rs = None
-        
+
     with open(settings.summary) as reach_fp:
         rs = nopticon.ReachSummary(reach_fp.read(), settings.sigfigs)
 
