@@ -370,7 +370,7 @@ def main():
             else:
                 loc = settings.visualize + prettify_name(datafile)
             fwd_summary = implied_properties.EnhancedReachSummary(fwd_str, 9)
-            pref_summary = nopticon.PrefSummary(fwd_str, 9)
+            pref_summary = implied_properties.PrefSummary(fwd_str, 9)
         with open(topofile.strip(), 'r') as topo_fp:
             topo = implied_properties.Topo(topo_fp.read())
         with open(polfile.strip(), 'r') as pol_fp:

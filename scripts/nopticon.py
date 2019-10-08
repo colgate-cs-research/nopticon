@@ -6,40 +6,6 @@ from enum import Enum
 import ipaddress
 import json
 
-class PrefSummary:
-    def __init__(self, summary_json, sigfigs=9):
-        self._summary=json.loads(summary_json)
-        self._sigfigs = sigfigs
-
-        self._preferences = []
-
-        if 'path-preferences' in self._summary:
-        
-            for pref in self._summary['path-preferences']:
-                if pref['rank'] > 0.5:
-                    self._preferences.append(PathPreferencePolicy({
-                        'flow' : pref['flow'],
-                        'paths' : [
-                            pref['x-path'],
-                            pref['y-path'],
-                        ]
-                    }))
-                else:
-                    # print("DISCARD", PathPreferencePolicy({
-                    #     'flow' : pref['flow'],
-                    #     'paths' : [
-                    #         pref['x-path'],
-                    #         pref['y-path'],
-                    #     ]
-                    # }), pref["rank"])
-                    continue
-
-    def preferences(self):
-        return self._preferences
-
-    def __str__(self):
-        return "\n".join(str(p) for p in preferences)
-
 class ReachSummary:
     def __init__(self, summary_json, sigfigs=8):
         self._summary = json.loads(summary_json)
