@@ -5,8 +5,6 @@ Python classes for Nopticon
 from enum import Enum
 import ipaddress
 import json
-import matplotlib.pyplot as plt
-
 
 class PrefSummary:
     def __init__(self, summary_json, sigfigs=9):
@@ -43,7 +41,7 @@ class PrefSummary:
         return "\n".join(str(p) for p in preferences)
 
 class ReachSummary:
-    def __init__(self, summary_json, sigfigs=9, loc=""):
+    def __init__(self, summary_json, sigfigs=8):
         self._summary = json.loads(summary_json)
         self._sigfigs = sigfigs
 
@@ -57,15 +55,21 @@ class ReachSummary:
                 flow_edges[edge] = edge_details
             self._edges[flow_prefix] = flow_edges
 
-        if len(loc) > 0:
-            rank_distrib = [self.get_edge_rank(f,e) for (f,e) in self.get_flowedges()
-                            if self.get_edge_rank(f,e) > 0.9]
-            plt.figure(figsize=(8,3))
-            plt.hist(rank_distrib)
-            plt.xlim(0.9,1.0)
-            plt.savefig(loc + "-hist.pdf")
-            plt.close('all')
-            
+    def get_flows(self):
+        return self._edges.keys()
+
+    def get_edges(self, flow):
+        if flow not in self._edges:
+            return {}
+        return self._edges[flow]
+    
+    def get_edge_rank(self, flow, edge):
+        if edge not in self.get_edges(flow):
+            return None
+        return round(self.get_edges(flow)[edge]['rank-0'], self._sigfigs)
+
+    def get_flowedges(self):
+        return [(f,e) for f in self.get_flows() for e in self.get_edges(f)]
 
     def to_policy_set(self, show_implied=False, flow_str=None, threshold=0):
         policies = set()
@@ -109,19 +113,6 @@ class ReachSummary:
             if 'implied_by' in edge_data:
                 del edge_data['implied_by']
         return
-            
-            
-
-    def get_flows(self):
-        return self._edges.keys()
-
-    def get_edges(self, flow):
-        if flow not in self._edges:
-            return {}
-        return self._edges[flow]
-
-    def get_flowedges(self):
-        return [(f,e)for f in self.get_flows() for e in self.get_edges(f)]
     
     def mark_above_threshold(self, t, flow, edge):
         self.get_edges(flow)[edge]['T'] = t
@@ -165,14 +156,6 @@ class ReachSummary:
         else:
             return []
     
-    def get_edge_rank(self, flow, edge):
-        if edge not in self.get_edges(flow):
-            return None
-        return round(self.get_edges(flow)[edge]['rank-0'], self._sigfigs)
-
-    def get_flows(self):
-        return self._edges.keys()
-
 class LinkSummary:
     def __init__(self, summary_json):
         self._summary = json.loads(summary_json)

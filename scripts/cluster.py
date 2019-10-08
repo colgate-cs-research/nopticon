@@ -116,8 +116,8 @@ def main():
             action="store_true", default=False,
             help='use name-based equivalence classes')
     args.add_argument('-c', '--cluster-threshold', dest="cluster_threshold",
-                      default=None, type=float,
-                      help="Cluster via the thresholding method. i.e. the cluster is every point aboce the provided argument")
+            default=None, type=float,
+            help="Cluster via thresholding: i.e. the cluster is every point above the provided threshold")
     settings = args.parse_args()
 
     # Load summaries
