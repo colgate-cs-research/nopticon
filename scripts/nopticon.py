@@ -34,6 +34,11 @@ class ReachSummary:
             return None
         return round(self.get_edges(flow)[edge]['rank-0'], self._sigfigs)
 
+    def get_edge_history(self, flow, edge):
+        if edge not in self.get_edges(flow):
+            return None
+        return self.get_edges(flow)[edge]['history']
+
     def get_flowedges(self):
         return [(f,e) for f in self.get_flows() for e in self.get_edges(f)]
 
@@ -120,8 +125,8 @@ class Policy:
 class ReachabilityPolicy(Policy):
     def __init__(self, policy_dict):
         super().__init__(PolicyType.REACHABILITY, policy_dict)
-        self._source = policy_dict['source'][:10]
-        self._target = policy_dict['target'][:10]
+        self._source = policy_dict['source']
+        self._target = policy_dict['target']
 
     def edge(self):
         return (self._source, self._target)
@@ -142,7 +147,7 @@ class PathPreferencePolicy(Policy):
         self._paths = policy_dict['paths']
         for path in self._paths:
             for i in range(0, len(path)):
-                path[i] = path[i][:10]
+                path[i] = path[i]
 
     def toReachabilityPolicy(self):
         return ReachabilityPolicy({'flow' : self._flow,
