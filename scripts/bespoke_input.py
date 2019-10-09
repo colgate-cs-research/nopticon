@@ -150,7 +150,8 @@ class NetworkScript:
             with open(rdns, 'r') as rndsfile:
                 self.rDNS_json = json.load(rdnsfile)
             self.rDNS_logical = Logical(topo).get_rDNS_logical()
-        ## Generate rDNS
+        ## Generate rDNS -- assume IP addresses are assigned based on router 
+        # name
         else:
             self.rDNS_json = {"routers" : []}
             self.rDNS_logical = {}
