@@ -1,5 +1,5 @@
 """
-Python classes for BMP 
+Python classes for BMP
 """
 
 from enum import Enum
@@ -31,7 +31,9 @@ class Message:
         self._type = msg_type
         src_id = msg_dict['PeerHeader']['PeerBGPID']
         self._src_id = (None if src_id == '' else ipaddress.ip_address(src_id))
-        src_as = msg_dict['PeerHeader']['PeerAS']
+        src_as = 0
+        if 'PeerAS' in msg_dict['PeerHeader']:
+            src_as = msg_dict['PeerHeader']['PeerAS']
         self._src_as = (None if src_as == 0 else src_as)
         self._timestamp = msg_dict['PeerHeader']['Timestamp']
 
