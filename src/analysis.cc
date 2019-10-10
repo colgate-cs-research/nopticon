@@ -357,10 +357,12 @@ void analysis_t::update_reach_summary(timestamp_t timestamp) {
           history.start(timestamp);
           history.request_stop = false;
           bitset.set(t);
+          history.can_be_direct |= bitset.count() == 1;
           stack.push_back(t);
         }
       }
       bitset.reset();
+      assert(bitset.count() == 0);
     }
     for (auto &history : history_vec) {
       // stop requests for histories that just got started are no-ops

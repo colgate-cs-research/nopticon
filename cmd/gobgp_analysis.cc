@@ -215,6 +215,8 @@ void log_t::print_reach_summary(
       print_nid(writer, s);
       writer.Key("target");
       print_nid(writer, t);
+      writer.Key("can-be-direct");
+      writer.Bool(history.can_be_direct);
       unsigned rank_id = 0;
       for (auto rank : ranks) {
         assert(rank_id < s_rank_strings_len);
