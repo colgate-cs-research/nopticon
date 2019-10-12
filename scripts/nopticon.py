@@ -34,8 +34,8 @@ class ReachSummary:
             return None
         return round(self.get_edges(flow)[edge]['rank-0'], self._sigfigs)
 
-    def get_flows(self):
-        return self._edges.keys()
+    def get_flowedges(self):
+        return [(f,e) for f in self.get_flows() for e in self.get_edges(f)]
 
 class LinkSummary:
     def __init__(self, summary_json):
@@ -114,6 +114,9 @@ class Policy:
     def isType(self, typ):
         return self._type == typ
 
+    def flow(self):
+        return self._flow
+
 class ReachabilityPolicy(Policy):
     def __init__(self, policy_dict):
         super().__init__(PolicyType.REACHABILITY, policy_dict)
@@ -143,8 +146,49 @@ class PathPreferencePolicy(Policy):
 
     def toReachabilityPolicy(self):
         return ReachabilityPolicy({'flow' : self._flow,
-            'source' : self._paths[0][0], 'target' : self._paths[0][-1]})
+                'source' : self._paths[0][0], 'target' : self._paths[0][-1]})
 
+    def toImpliedReachabilityPolicies(self, waypoints_only=False):
+        if (waypoints_only):
+            waypoints = set(self._paths[0])
+            for p in self._paths:
+                waypoints = waypoints.intersection(set(p))
+            return [ReachabilityPolicy({'flow' : self._flow, 
+                    'source': self._paths[0][0],
+                    'target': w}) for w in waypoints] + \
+                    [ReachabilityPolicy({'flow' : self._flow,
+                    'source': w,
+                    'target': self._paths[0][-1]}) for w in waypoints]
+        else:
+            return  [ReachabilityPolicy({'flow' : self._flow,
+                                        'source': n,
+                                        'target': m})
+                    for p in self._paths
+                    for i,n in enumerate(p)
+                    for m in p[i+1:]] 
+
+    def __eq__(self, other):
+        if self._flow != other._flow:
+            return False
+        
+        for pp in self._paths:
+            pp_in_other = False
+            for op in other._paths:
+                if pp == op:
+                    pp_in_other = True
+            if not pp_in_other:
+                return False
+
+        for op in other._paths:
+            op_in_self = False
+            for pp in self._paths:
+                if op == pp:
+                    op_in_self = True
+            if not op_in_self:
+                return False
+
+        return True
+    
     def __str__(self):
         return '%s %s' % (self._flow,
                 ' > '.join(['->'.join(path) for path in self._paths]))

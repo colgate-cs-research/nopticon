@@ -23,27 +23,51 @@ def infer_reachability(summaries, settings):
             for edge in summary.get_edges(flow):
                 rank = round(summary.get_edge_rank(flow, edge), 
                         settings.precision)
-                if rank > float(settings.threshold):
+                if rank >= float(settings.threshold):
                     policy = nopticon.ReachabilityPolicy({'flow' : flow,
                         'source' : edge[0], 'target' : edge[1]})
                     prop[policy] = len(ranks)
                     if settings.equiv_classes:
                         # TODO: genericize class
-                        ranks.append([rank, edge[0][0], edge[1][0]])
+                        ranks.append([rank, edge[1][0], edge[1][0]])
                     else:
                         ranks.append([rank])
 
-        if settings.equiv_classes:
-            kproto = KPrototypes(n_clusters=2, init='cao')
-            clust = kproto.fit_predict(np.matrix(ranks).A, categorical=[1,2])
+        if settings.cluster_threshold is None:
+            if settings.equiv_classes:
+                kproto = KPrototypes(n_clusters=2, init='cao')
+                clust = kproto.fit_predict(np.matrix(ranks).A, categorical=[1,2])
+            else:
+                agg = AgglomerativeClustering(n_clusters=2, linkage="ward")
+                clust = agg.fit(ranks).labels_
         else:
-            agg = AgglomerativeClustering(n_clusters=2, linkage="ward")
-            clust = agg.fit(ranks).labels_
+            clust = [ 1 if rank[0] >= settings.cluster_threshold else 0
+                      for rank in ranks]
 
-        fig = plt.figure()
-        ax = plt.subplot()
+        
 
         colors = ['green', 'red', 'blue', 'purple', 'cyan', 'orange']
+
+        if settings.equiv_classes:
+            fig = plt.figure()
+            classview = {}            
+            for rs in ranks:
+                rank = rs[0]
+                # src = rs[1]
+                tgt = rs[2]
+                if tgt in classview:
+                    classview[tgt].append(rank)
+                else:
+                    classview[tgt] = [rank]
+
+            data = [(s,classview[s]) for s in classview.keys()]
+            plt.hist([r for _,r in data],
+                     label= [s for s,_ in data],
+                     bins=[.93,.95,.96,.97,.98,.99,1.0], stacked=True)
+            plt.legend()
+            # data = [(s+t, r) for s,rst in classview.items() for t,rnks in rst.items() for r in rnks]
+            # plt.scatter(x = [x for x,y in data], y = [y for x,y in data])
+            fig.savefig("cluster.png")
 
         means = {}
         high = None
@@ -91,13 +115,16 @@ def main():
     args.add_argument('-e', '--equiv-classes', dest='equiv_classes', 
             action="store_true", default=False,
             help='use name-based equivalence classes')
+    args.add_argument('-c', '--cluster-threshold', dest="cluster_threshold",
+            default=None, type=float,
+            help="Cluster via thresholding: i.e. the cluster is every point above the provided threshold")
     settings = args.parse_args()
 
     # Load summaries
     summaries = []
     with open(settings.summary_path, 'r') as sf:
         for summary_json in sf:
-            summaries.append(nopticon.ReachSummary(summary_json))
+            summaries.append(nopticon.ReachSummary(summary_json, settings.precision))
 
     # Load policies
     with open(settings.policies_path, 'r') as pf:
@@ -112,18 +139,21 @@ def main():
     # Infer rechability properties
     all_prop, inferences_per_summary = infer_reachability(summaries, settings)
             
-    print("Inferred %d policies from %d summaries" % 
-            (len(all_prop), len(summaries)))
+    #print("Inferred %d policies from %d summaries" % 
+    #        (len(all_prop), len(summaries)))
 
     correct_policies = 0
     for p in all_prop:
         valid = p in policies
         if (valid):
             correct_policies += 1
-        print("%s %s" % (p, valid))
+            # print("%s %s" % (p, valid))
 
-    print("Precision: %f" % (correct_policies/len(all_prop)))
-    print("Recall: %f" % (correct_policies/len(policies)))
+    if settings.cluster_threshold is not None:
+        print(settings.cluster_threshold, (correct_policies/len(all_prop)), (correct_policies/(len(policies))))
+    else :
+        print("Precision: %f" % (correct_policies/len(all_prop)))
+        print("Recall: %f" % (correct_policies/len(policies)))
 
 #    pp = PrettyPrinter(width=80)
 #    comparisons = [[(0,0,0) for _ in inferences_per_summary]
