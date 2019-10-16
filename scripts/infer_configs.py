@@ -329,6 +329,8 @@ def main():
     topo = open(args.topo, 'r')
     if args.output:
         output = open(args.output, 'w+')
+    else:
+        output = sys.stdout
 
     routers = parse_topo(topo)
     topo.close()
@@ -364,8 +366,8 @@ def main():
 
         output.write('\n\n')
 
-
-    output.close()
+    if args.output:
+        output.close()
 
     if args.configs_path:
         configs(args.configs_path, routers, route_origins)
