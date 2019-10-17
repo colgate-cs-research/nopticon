@@ -1,15 +1,17 @@
 #! /usr/bin/python3
 
 from itertools import combinations
+import json
 import nopticon
 from argparse import ArgumentParser
+import superpecs
 
 class EnhancedReachSummary(nopticon.ReachSummary):
     def __init__(self, summary_json, sigfigs):
         super().__init__(summary_json, sigfigs)
 
     def to_policy_set(self, show_implied=False, flow_str=None, threshold=0):
-        policies = []
+        policies = {}
         for flow in self.get_flows():
             if flow_str is not None and str(flow) != flow_str:
                 continue
@@ -18,7 +20,9 @@ class EnhancedReachSummary(nopticon.ReachSummary):
                 rank = self.get_edge_rank(flow,edge)
                 if rank >= threshold:
                     if (show_implied and is_implied) or not is_implied:
-                        policies.append(nopticon.ReachabilityPolicy({
+                        if (flow not in policies):
+                            policies[flow] = []
+                        policies[flow].append(nopticon.ReachabilityPolicy({
                             'flow' : flow,
                             'source': edge[0],
                             'target': edge[1]
@@ -359,6 +363,10 @@ def main():
             default=None, help="List of expected policies for the `summary`")
     parser.add_argument('-c', '--coerce', dest='coerce', action='store_true',
             help='Coerce path-preference policies to reachability policies')
+    parser.add_argument('--super', dest='super_pecs', action='store_true',
+            help='Aggregate by super PEC')
+    parser.add_argument('--rdns', dest='rdns_path', action='store',
+            default=None, help='rDNS file containing prefix descriptions')
     settings = parser.parse_args()
  
     if settings.threshold < 0 or settings.threshold > 1:
@@ -386,6 +394,10 @@ def main():
         return 1
 
     reach_summ = EnhancedReachSummary(reach_str, 2)
+
+    # Compute super PECs, if necessary
+    if (settings.super_pecs):
+        specs = superpecs.compute_specs(reach_summ)
     
     topo_str = None
     with open(settings.topo) as topo_fp:
@@ -397,16 +409,36 @@ def main():
     props = reach_summ.to_policy_set(show_implied=settings.include_implied,
             threshold=settings.threshold)
 
+    descriptions = {}
+    if (settings.rdns_path is not None):
+        with open(settings.rdns_path) as rdns_fp:
+            rdns = json.loads(rdns_fp.read())
+        if "prefixes" in rdns:
+            for prefix in rdns["prefixes"]:
+                descriptions[prefix["prefix"]] = prefix["descriptions"]
+
     if settings.policies_path is None:
-        for p in sorted(props):
-            print(p)
+        if (settings.super_pecs):
+            for spec in specs:
+                for flow in spec:
+                    print("%s %s" % (flow, (descriptions[str(flow)]
+                            if str(flow) in descriptions else "")))
+                for policy in sorted(props[spec[0]]):
+                    print('\t%s -> %s' % policy.edge())
+        else:
+            for flow in sorted(props.keys()):
+                print("%s %s" % (flow, (descriptions[str(flow)]
+                        if str(flow) in descriptions else "")))
+                for policy in sorted(props[flow]):
+                    print('\t%s -> %s' % policy.edge())
     else:
         correct_policies = 0
-        for p in props:
-            if p in policies:
-                correct_policies += 1
-            # else:
-            #     print("FP:", p, reach_summ.get_edge_rank(p._flow, (p._source, p._target)))
+        for flow in sorted(props.keys()):
+            for policy in sorted(props[flow]):
+                if policy in policies:
+                    correct_policies += 1
+                # else:
+                #     print("FP:", p, reach_summ.get_edge_rank(p._flow, (p._source, p._target)))
                 
             
         print("Precision:", float(correct_policies/len(props)))

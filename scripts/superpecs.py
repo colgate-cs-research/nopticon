@@ -9,7 +9,20 @@ from argparse import ArgumentParser
 import json
 import nopticon
 
+def compute_specs(summary):
+    """
+    Compute super PECs based on a reach summary
+    """
+    specs = []
+    for flow in sorted(summary.get_flows()):
+        assign_to_spec(flow, specs, summary)
+    return specs
+
+
 def assign_to_spec(flow, specs, summary):
+    """
+    Determine which SPEC a flow belongs to
+    """
     flow_edges = summary.get_edges(flow)
     for spec in specs:
         spec_edges = summary.get_edges(spec[0])
@@ -37,11 +50,10 @@ def main():
         summary_json = sf.read()
     summary = nopticon.ReachSummary(summary_json)
 
-    # Compute super PECs
-    specs = []
-    for flow in sorted(summary.get_flows()):
-        assign_to_spec(flow, specs, summary)
+    # Compute SPECs
+    specs = compute_specs(summary)
 
+    # Output SPECs
     for spec in specs:
         print(','.join([str(flow) for flow in spec]))
 
