@@ -13,13 +13,14 @@ import nopticon
 def get_edge_rank(summary, flow, edge):
     rank = summary.get_edge_rank(flow, edge)
     if (rank is None):
-        return (0, math.inf)
+        return (-1, -1, -1, [])
     edges = summary.get_edges(flow)
     ranks = sorted(set([summary.get_edge_rank(flow, edge) for edge in edges.keys()]),
             reverse=True)
     flow_rank = ranks.index(rank) + 1
     flow_percentile = flow_rank/len(ranks) * 100
-    return (rank, flow_rank, flow_percentile)
+    history = summary.get_edge_history(flow, edge)
+    return (rank, flow_rank, flow_percentile, history)
 
 
 def check_reachability(policy, summary):
@@ -69,13 +70,13 @@ def main():
     for policy in policies:
         if policy.isType(nopticon.PolicyType.REACHABILITY):
             reach_result = check_reachability(policy, summary)
-            if (reach_result[0] > settings.threshold):
+            if (reach_result[0] >= settings.threshold):
                 satisfied = 'satisfied'
                 num_satisfied += 1
             else:
                 satisfied = 'unsatisfied'
-            print('Policy %s %f %d %f %s' % (policy, reach_result[0],
-                reach_result[1], reach_result[2], satisfied))
+            print('Policy %s %f %d %f %s %s' % (policy, reach_result[0],
+                reach_result[1], reach_result[2], satisfied, reach_result[3]))
     # Indicate how many policies were found
     print('%d out of %d policies were found.' % (num_satisfied, len(policies)))
 
@@ -92,10 +93,12 @@ def main():
         # Identify extra edges
         for flow in summary.get_flows():
             for edge in summary.get_edges(flow):
-                if edge not in policy_edges[flow]:
+                if flow not in policy_edges or edge not in policy_edges[flow]:
                     rank_result = get_edge_rank(summary, flow, edge)
-                    print('Extra %s %s->%s %f %d %f' % (flow, edge[0], edge[1],
-                        rank_result[0], rank_result[1], rank_result[2]))
+                    if (rank_result[0] >= settings.threshold):
+                        print('Extra %s %s->%s %f %d %f' % (flow, edge[0],
+                            edge[1], rank_result[0], rank_result[1],
+                            rank_result[2]))
 
 if __name__ == '__main__':
     main()
