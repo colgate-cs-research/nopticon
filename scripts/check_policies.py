@@ -38,8 +38,8 @@ def main():
     arg_parser.add_argument('-c', '--coerce', dest='coerce',
             action='store_true',
             help='Coerce path-preference policies to reachability policies')
-    arg_parser.add_argument('-t', '--threshold', default=0.5, type=float, required=False,
-                        help='The minimum rank to consider between 0 and 1')
+    arg_parser.add_argument('-t', '--threshold', default=0.5, type=float,
+            required=False, help='The minimum rank to consider between 0 and 1')
     settings = arg_parser.parse_args()
     num_satisfied = 0
 
@@ -61,10 +61,7 @@ def main():
     if (settings.coerce):
         for idx, policy in enumerate(policies):
             if policy.isType(nopticon.PolicyType.PATH_PREFERENCE):
-                policies[idx] = nopticon.ReachabilityPolicy(
-                        {'flow' : policy._flow,
-                        'source' : policy._paths[0][0],
-                        'target' : policy._paths[0][-1]})
+                policies[idx] = policy.toReachabilityPolicy()
 
     # Check policies
     for policy in policies:

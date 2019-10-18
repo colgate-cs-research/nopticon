@@ -141,6 +141,14 @@ class ReachabilityPolicy(Policy):
         return ((self._flow, self._source, self._target)
                 == (other._flow, other._source, other._target))
 
+    def __lt__(self, other):
+        return ((self._flow < other._flow)
+                or ((self._flow == other._flow)
+                    and (self._source < other._source))
+                or ((self._flow == other._flow)
+                    and (self._source == other._source)
+                    and (self._target < other._target)))
+
 class PathPreferencePolicy(Policy):
     def __init__(self, policy_dict):
         super().__init__(PolicyType.PATH_PREFERENCE, policy_dict)

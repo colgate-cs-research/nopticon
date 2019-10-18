@@ -1,15 +1,17 @@
 #! /usr/bin/python3
 
 from itertools import combinations
-from nopticon import ReachSummary, PolicyType, parse_policies
+import json
+import nopticon
 from argparse import ArgumentParser
+import superpecs
 
 class EnhancedReachSummary(nopticon.ReachSummary):
     def __init__(self, summary_json, sigfigs):
         super().__init__(summary_json, sigfigs)
 
     def to_policy_set(self, show_implied=False, flow_str=None, threshold=0):
-        policies = set()
+        policies = {}
         for flow in self.get_flows():
             if flow_str is not None and str(flow) != flow_str:
                 continue
@@ -18,7 +20,9 @@ class EnhancedReachSummary(nopticon.ReachSummary):
                 rank = self.get_edge_rank(flow,edge)
                 if rank >= threshold:
                     if (show_implied and is_implied) or not is_implied:
-                        policies.add(ReachabilityPolicy({
+                        if (flow not in policies):
+                            policies[flow] = []
+                        policies[flow].append(nopticon.ReachabilityPolicy({
                             'flow' : flow,
                             'source': edge[0],
                             'target': edge[1]
@@ -346,36 +350,40 @@ def mark_implied_properties(reach, topo, threshold):
     
 def main():
     parser = ArgumentParser(description="Remove Implied Properties")
-    parser.add_argument("summary", help="The file path to a reachability summary")
-    parser.add_argument("topo", help="The Topology file for the network from which the `summary` was collected")
-    parser.add_argument("--include-implied", dest="include_implied", default=False, action="store_true",
-                        help="Include the implied properties in the output")
-    parser.add_argument("-t", "--threshold", default=50, type=int,
-                        help="Threshold (as a percentage); ranks below the threshold are discarded; must be between 0 and 100")
-    parser.add_argument("-p", "--policies-path", dest="policies_path", default=None,
-                        help="List of expected policies for the `summary`")
-    
+    parser.add_argument('-s','--summary', dest='summary',
+            action='store', required=True, help='Path to summary JSON file')
+    parser.add_argument('--topo', dest='topo', action='store',
+            required=True, help="Topology file for the network from which the summary was collected")
+    parser.add_argument("--include-implied", dest="include_implied",
+            default=False, action="store_true",
+            help="Include the implied properties in the output")
+    parser.add_argument("-t", "--threshold", default=0.5, type=float,
+            help="The minimum rank to consider; must be between 0 and 1")
+    parser.add_argument("-p", "--policies", dest="policies_path",
+            default=None, help="List of expected policies for the `summary`")
+    parser.add_argument('-c', '--coerce', dest='coerce', action='store_true',
+            help='Coerce path-preference policies to reachability policies')
+    parser.add_argument('--super', dest='super_pecs', action='store_true',
+            help='Aggregate by super PEC')
+    parser.add_argument('--rdns', dest='rdns_path', action='store',
+            default=None, help='rDNS file containing prefix descriptions')
     settings = parser.parse_args()
  
-    # check threshold has a valid value
-    if settings.threshold > 100 or settings.threshold < 0:
-        print("ERROR: Value supplied to --threshold must be between 0 and 100. You supplied", settings.threshold)
+    if settings.threshold < 0 or settings.threshold > 1:
+        print("Threshold must be between 0 and 1")
         return 1
-    else:
-        threshold = float(settings.threshold) / 100.0
-
 
     if settings.policies_path is not None:
         # load policies
         with open(settings.policies_path, 'r') as pf:
             policies_json = pf.read()
-        s_policies = parse_policies(policies_json)
+        policies = nopticon.parse_policies(policies_json)
     
         # Coerce path preference policies to reachability policy
-        policies = []
-        for idx, policy in enumerate(s_policies):
-            if policy.isType(PolicyType.PATH_PREFERENCE):
-                policies += [policy.toReachabilityPolicy()]
+        if (settings.coerce):
+            for idx, policy in enumerate(policies):
+                if policy.isType(nopticon.PolicyType.PATH_PREFERENCE):
+                    policies[idx] = policy.toReachabilityPolicy()
                 
     reach_str = None
     with open(settings.summary) as reach_fp:
@@ -386,6 +394,10 @@ def main():
         return 1
 
     reach_summ = EnhancedReachSummary(reach_str, 2)
+
+    # Compute super PECs, if necessary
+    if (settings.super_pecs):
+        specs = superpecs.compute_specs(reach_summ)
     
     topo_str = None
     with open(settings.topo) as topo_fp:
@@ -393,19 +405,40 @@ def main():
 
     topo = Topo(topo_str)
     
-    mark_implied_properties(reach_summ, topo, threshold)
-    props = reach_summ.to_policy_set(show_implied=settings.include_implied, threshold=threshold)
+    mark_implied_properties(reach_summ, topo, settings.threshold)
+    props = reach_summ.to_policy_set(show_implied=settings.include_implied,
+            threshold=settings.threshold)
+
+    descriptions = {}
+    if (settings.rdns_path is not None):
+        with open(settings.rdns_path) as rdns_fp:
+            rdns = json.loads(rdns_fp.read())
+        if "prefixes" in rdns:
+            for prefix in rdns["prefixes"]:
+                descriptions[prefix["prefix"]] = prefix["descriptions"]
 
     if settings.policies_path is None:
-        for p in props:
-            print(p)
+        if (settings.super_pecs):
+            for spec in specs:
+                for flow in spec:
+                    print("%s %s" % (flow, (descriptions[str(flow)]
+                            if str(flow) in descriptions else "")))
+                for policy in sorted(props[spec[0]]):
+                    print('\t%s -> %s' % policy.edge())
+        else:
+            for flow in sorted(props.keys()):
+                print("%s %s" % (flow, (descriptions[str(flow)]
+                        if str(flow) in descriptions else "")))
+                for policy in sorted(props[flow]):
+                    print('\t%s -> %s' % policy.edge())
     else:
         correct_policies = 0
-        for p in props:
-            if p in policies:
-                correct_policies += 1
-            # else:
-            #     print("FP:", p, reach_summ.get_edge_rank(p._flow, (p._source, p._target)))
+        for flow in sorted(props.keys()):
+            for policy in sorted(props[flow]):
+                if policy in policies:
+                    correct_policies += 1
+                # else:
+                #     print("FP:", p, reach_summ.get_edge_rank(p._flow, (p._source, p._target)))
                 
             
         print("Precision:", float(correct_policies/len(props)))
