@@ -23,6 +23,7 @@
 #define MILLISECONDS_PER_SECOND 1000
 
 typedef std::unordered_map<std::string, nopticon::nid_t> string_to_nid_t;
+typedef std::unordered_map<nopticon::nid_t, std::unordered_map<nopticon::nid_t, nopticon::bandwidth_t>> link_to_bandwidth_t;
 typedef std::vector<std::string> nid_to_name_t;
 
 std::string ipv4_format(nopticon::ip_addr_t ip_addr) {
@@ -342,7 +343,8 @@ void log_t::print(const nopticon::analysis_t &analysis) {
 
 /// \post every nid is strictly less than `name_to_nid.size()`
 int read_rdns(FILE *file, string_to_nid_t &name_to_nid,
-              string_to_nid_t &ip_to_nid) {
+              string_to_nid_t &ip_to_nid,
+              link_to_bandwidth_t &link_to_bandwidth) {
   assert(file != nullptr);
   nopticon::nid_t nid = 0;
   char read_buffer[std::numeric_limits<uint16_t>::max()];
@@ -378,6 +380,43 @@ int read_rdns(FILE *file, string_to_nid_t &name_to_nid,
       }
     }
   }
+
+  // Read bandwidth data and create mapping of links to bandwidth
+  if (document.HasMember("links")) {
+    for (auto &link : document["links"].GetArray()) {
+      if (not link.HasMember("source")) {
+        std::cerr << "Expected 'source' field in each rDNS object" << std::endl;
+        return EXIT_FAILURE;
+      }
+      auto sourceName = link["source"].GetString();
+      if (not link.HasMember("target")) {
+        std::cerr << "Expected 'target' field in each rDNS object" << std::endl;
+        return EXIT_FAILURE;
+      }
+      auto targetName = link["target"].GetString();
+      if (not link.HasMember("bandwidth")) {
+        std::cerr << "Expected 'bandwidth' field in each rDNS object" << std::endl;
+        return EXIT_FAILURE;
+      }
+      auto bandwidth = link["bandwidth"].GetUint64();
+      auto sourceIter = name_to_nid.find(sourceName);
+      nopticon::nid_t source;
+      if (sourceIter != name_to_nid.end()) {
+        source = sourceIter->second;
+      } else {
+        source = name_to_nid[sourceName] = nid++;
+      }
+      auto targetIter = name_to_nid.find(targetName);
+      nopticon::nid_t target;
+      if (targetIter != name_to_nid.end()) {
+        target = targetIter->second;
+      } else {
+        target = name_to_nid[targetName] = nid++;
+      }
+      link_to_bandwidth[source][target] = bandwidth;
+    }
+  }
+
   assert(nid == name_to_nid.size());
   return EXIT_SUCCESS;
 }
@@ -654,7 +693,8 @@ int main(int argc, char **args) {
     return EXIT_FAILURE;
   }
   string_to_nid_t name_to_nid, ip_to_nid;
-  auto status = read_rdns(rdns_file, name_to_nid, ip_to_nid);
+  link_to_bandwidth_t link_to_bandwidth;
+  auto status = read_rdns(rdns_file, name_to_nid, ip_to_nid, link_to_bandwidth);
   fclose(rdns_file);
   if (status) {
     return status;

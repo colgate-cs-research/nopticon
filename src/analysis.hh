@@ -199,4 +199,6 @@ private:
 
 timestamps_t intersect(const timestamps_t &, const timestamps_t &);
 
+typedef uint64_t bandwidth_t;
+
 } // namespace nopticon
