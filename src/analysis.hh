@@ -19,6 +19,8 @@ bool check_loop(const_flow_t, const loop_t &);
 typedef uint64_t duration_t;
 typedef uint64_t timestamp_t;
 
+typedef uint64_t bandwidth_t;
+
 class slice_t {
 public:
   slice_t(duration_t span) : m_span{span} {}
@@ -160,7 +162,7 @@ public:
 
   /// Returns true when a new rule has been created; false otherwise
   bool insert_or_assign(const ip_prefix_t &, source_t, const target_t &,
-                        timestamp_t current = 0);
+                        timestamp_t current = 0, bandwidth_t bandwidth = 0);
 
   /// Returns true if the rule existed; false otherwise
   bool erase(const ip_prefix_t &, source_t, timestamp_t current = 0);
@@ -198,7 +200,5 @@ private:
 };
 
 timestamps_t intersect(const timestamps_t &, const timestamps_t &);
-
-typedef uint64_t bandwidth_t;
 
 } // namespace nopticon

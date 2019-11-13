@@ -376,7 +376,8 @@ void analysis_t::update_reach_summary(timestamp_t timestamp) {
 
 bool analysis_t::insert_or_assign(const ip_prefix_t &ip_prefix, source_t source,
                                   const target_t &new_target,
-                                  timestamp_t timestamp) {
+                                  timestamp_t timestamp,
+                                  bandwidth_t bandwidth) {
   m_affected_flows.clear();
   bool status = m_flow_graph.insert_or_assign(ip_prefix, source, new_target,
                                               m_affected_flows);

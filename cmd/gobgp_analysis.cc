@@ -488,7 +488,9 @@ void process_cmd(nopticon::analysis_t &analysis, log_t &log,
 }
 
 void process_bmp_message(std::size_t number_of_nodes, FILE *file,
-                         const string_to_nid_t &ip_to_nid, log_t &log) {
+                         const string_to_nid_t &ip_to_nid,
+                         link_to_bandwidth_t &link_to_bandwidth,
+                         log_t &log) {
   assert(file != nullptr);
   nopticon::analysis_t analysis{log.opt_reach_summary_spans(),
                                 number_of_nodes};
@@ -559,7 +561,14 @@ void process_bmp_message(std::size_t number_of_nodes, FILE *file,
         assert(nlri_value.HasMember("prefix"));
         auto ip_prefix = make_ip_prefix(nlri_value["prefix"].GetString());
         auto target = ip_to_nid.at(next_hop);
-        analysis.insert_or_assign(ip_prefix, source, {target}, timestamp);
+        // Get link bandwidth
+        nopticon::bandwidth_t bandwidth = 0;
+        if (link_to_bandwidth.count(source)
+            && link_to_bandwidth[source].count(target)) {
+          bandwidth = link_to_bandwidth[source][target];
+        }
+        analysis.insert_or_assign(ip_prefix, source, {target}, timestamp, 
+            bandwidth);
         log.print(analysis);
       }
     }
@@ -733,6 +742,7 @@ int main(int argc, char **args) {
             << "verbosity level: " << opt_verbosity << std::endl;
   log_t log{log_buffer,   nid_to_name,        opt_verbosity,
             opt_node_ids, opt_rank_threshold, opt_reach_summary_spans};
-  process_bmp_message(nid_to_name.size(), stdin, ip_to_nid, log);
+  process_bmp_message(nid_to_name.size(), stdin, ip_to_nid, link_to_bandwidth,
+      log);
   return EXIT_SUCCESS;
 }
