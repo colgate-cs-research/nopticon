@@ -159,8 +159,11 @@ public:
 
   void reset() noexcept;
 
+  const bandwidth_t minimum(flow_id_t, nid_t, nid_t) const;
+
 private:
-  bandwidth_vec_t m_minimum;
+  typedef std::vector<bandwidth_vec_t> tensor_t;
+  tensor_t m_minimum;
 
   inline std::size_t make_index(nid_t s, nid_t t) const {
     return number_of_nodes * s + t;
@@ -198,6 +201,10 @@ public:
 
   const reach_summary_t &reach_summary() const noexcept {
     return m_reach_summary;
+  }
+
+  const bandwidth_summary_t &bandwidth_summary() const noexcept {
+    return m_bandwidth_summary;
   }
 
   const loops_per_flow_t &loops_per_flow() const noexcept {

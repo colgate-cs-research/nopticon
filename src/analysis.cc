@@ -234,7 +234,23 @@ bandwidth_summary_t::bandwidth_summary_t(std::size_t number_of_nodes)
 }
 
 void bandwidth_summary_t::reset() noexcept {
-  m_minimum.assign(m_minimum.size(), -1);
+  for (auto &bandwidth_vec : m_minimum) {
+    bandwidth_vec.assign(bandwidth_vec.size(), 0);
+  }
+}
+
+const bandwidth_t bandwidth_summary_t::minimum(flow_id_t flow_id, nid_t s,
+                                            nid_t t) const {
+  static bandwidth_t s_empty_bandwidth = 0;
+  if (flow_id >= m_minimum.size()) {
+    return s_empty_bandwidth;
+  }
+  auto &bandwidth_vec = m_minimum[flow_id];
+  auto index = make_index(s, t);
+  if (index >= bandwidth_vec.size()) {
+    return s_empty_bandwidth;
+  }
+  return bandwidth_vec[index];
 }
 
 void analysis_t::update_bandwidth_summary(source_t start,

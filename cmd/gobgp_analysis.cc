@@ -77,6 +77,11 @@ private:
   void print_reach_summary(writer_t &, const nopticon::const_flow_t,
                              const nopticon::reach_summary_t &) const;
 
+  void print_bandwidth_summary(writer_t &, const nopticon::flow_tree_t &,
+                             const nopticon::bandwidth_summary_t &) const;
+  void print_bandwidth_summary(writer_t &, const nopticon::const_flow_t,
+                             const nopticon::bandwidth_summary_t &) const;
+
   void print_nid(writer_t &, nopticon::nid_t) const;
 
   std::ostream m_ostream;
@@ -266,6 +271,62 @@ void log_t::print_reach_summary(
   writer.EndArray();
 }
 
+void log_t::print_bandwidth_summary(
+    writer_t &writer, const nopticon::const_flow_t flow,
+    const nopticon::bandwidth_summary_t &bandwidth_summary) const {
+
+  assert(flow != nullptr);
+  if (flow->is_empty()) {
+    return;
+  }
+
+  bool is_empty = true;
+  for (nopticon::nid_t s = 0; s < m_nid_to_name.size(); ++s) {
+    for (nopticon::nid_t t = 0; t < m_nid_to_name.size(); ++t) {
+      if (s == t) {
+        continue;
+      }
+      auto minimum = bandwidth_summary.minimum(flow->id, s, t);
+      if (minimum <= 0) {
+        continue;
+      }
+      if (is_empty) {
+        writer.StartObject();
+        writer.Key("flow");
+        writer.String(ipv4_format(flow->ip_prefix));
+        writer.Key("edges");
+        writer.StartArray();
+        is_empty = false;
+      }
+      writer.StartObject();
+      writer.Key("source");
+      print_nid(writer, s);
+      writer.Key("target");
+      print_nid(writer, t);
+      writer.Key("minimum");
+      writer.Uint64(minimum);
+      writer.EndObject();
+    }
+  }
+  if (not is_empty) {
+    writer.EndArray();
+    writer.EndObject();
+  }
+}
+
+void log_t::print_bandwidth_summary(
+    writer_t &writer, const nopticon::flow_tree_t &flow_tree,
+    const nopticon::bandwidth_summary_t &bandwidth_summary) const {
+  auto flow_tree_iter = flow_tree.iter();
+  writer.Key("bandwidth-summary");
+  writer.StartArray();
+  do {
+    auto flow = flow_tree_iter.ptr();
+    print_bandwidth_summary(writer, flow, bandwidth_summary);
+  } while (flow_tree_iter.next());
+  writer.EndArray();
+}
+
 void log_t::print_errors(
     writer_t &writer, const nopticon::loops_per_flow_t &loops_per_flow) const {
   bool is_empty = true;
@@ -316,6 +377,10 @@ void log_t::print(const nopticon::analysis_t &analysis) {
       writer.EndObject();
     }
     writer.EndArray();
+  }
+  if (m_opt_verbosity >= 9) {
+    print_bandwidth_summary(writer, analysis.flow_graph().flow_tree(),
+        analysis.bandwidth_summary());
   }
   if (not m_opt_reach_summary_spans.empty()) {
     if (m_opt_verbosity >= 7) {
@@ -458,7 +523,7 @@ void process_cmd(nopticon::analysis_t &analysis, log_t &log,
   auto cmd = static_cast<cmd_t>(opcode);
   switch (cmd) {
   case cmd_t::PRINT_LOG:
-    highest_verbosity = 8;
+    highest_verbosity = 9;
     std::swap(log.m_opt_verbosity, highest_verbosity);
     log.print(analysis);
     std::swap(log.m_opt_verbosity, highest_verbosity);
@@ -635,7 +700,8 @@ static const char *const s_usage =
     "  \t6 - ... and information about all flows\n"
     "  \t7 - ... and network summary for all flows\n"
     "  \t    (requires --reach-summary SPANS option)\n"
-    "  \t8 - ... and history of each inferred property\n";
+    "  \t8 - ... and history of each inferred property\n"
+    "  \t9 - ... and bandwidth summary for all flows\n";
 
 void print_usage() { std::cerr << s_usage; }
 
