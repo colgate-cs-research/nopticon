@@ -228,6 +228,20 @@ history_t &reach_summary_t::history(flow_id_t flow_id, nid_t s, nid_t t) {
   return hv[index];
 }
 
+bandwidth_summary_t::bandwidth_summary_t(std::size_t number_of_nodes)
+    : number_of_nodes{number_of_nodes} {
+  assert(number_of_nodes <= analysis_t::MAX_NUMBER_OF_NODES);
+}
+
+void bandwidth_summary_t::reset() noexcept {
+  m_minimum.assign(m_minimum.size(), -1);
+}
+
+void analysis_t::update_bandwidth_summary(source_t start,
+        const affected_flows_t &affected_flows) {
+  // TODO
+}
+
 void find_loops(source_t start, const affected_flows_t &affected_flows,
                 loops_per_flow_t &loops_per_flow) {
   ip_addr_vec_t stack, path;

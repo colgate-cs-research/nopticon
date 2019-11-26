@@ -150,15 +150,34 @@ private:
   }
 };
 
+typedef std::vector<bandwidth_t> bandwidth_vec_t;
+
+class bandwidth_summary_t {
+public:
+  const std::size_t number_of_nodes;
+  bandwidth_summary_t(std::size_t);
+
+  void reset() noexcept;
+
+private:
+  bandwidth_vec_t m_minimum;
+
+  inline std::size_t make_index(nid_t s, nid_t t) const {
+    return number_of_nodes * s + t;
+  }
+};
+
 class analysis_t {
 public:
   constexpr static std::size_t MAX_NUMBER_OF_NODES = 4096;
 
   analysis_t(std::size_t number_of_nodes)
-      : m_reach_summary{spans_t{}, number_of_nodes} {}
+      : m_reach_summary{spans_t{}, number_of_nodes},
+        m_bandwidth_summary{number_of_nodes} {}
 
   analysis_t(const spans_t &spans, std::size_t number_of_nodes)
-      : m_reach_summary{spans, number_of_nodes} {}
+      : m_reach_summary{spans, number_of_nodes},
+        m_bandwidth_summary{number_of_nodes} {}
 
   /// Returns true when a new rule has been created; false otherwise
   bool insert_or_assign(const ip_prefix_t &, source_t, const target_t &,
@@ -192,11 +211,13 @@ public:
 private:
   void clean_up();
   void update_reach_summary(timestamp_t);
+  void update_bandwidth_summary(source_t, const affected_flows_t &);
 
   flow_graph_t m_flow_graph;
   affected_flows_t m_affected_flows;
   loops_per_flow_t m_loops_per_flow;
   reach_summary_t m_reach_summary;
+  bandwidth_summary_t m_bandwidth_summary;
 };
 
 timestamps_t intersect(const timestamps_t &, const timestamps_t &);
