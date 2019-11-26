@@ -232,6 +232,7 @@ void find_loops(source_t start, const affected_flows_t &affected_flows,
                 loops_per_flow_t &loops_per_flow) {
   ip_addr_vec_t stack, path;
   std::unordered_set<source_t> seen;
+  // Check for a forwarding loop for each PEC affected by a rule change
   for (auto flow : affected_flows) {
     assert(stack.empty());
     assert(seen.empty());
@@ -240,11 +241,14 @@ void find_loops(source_t start, const affected_flows_t &affected_flows,
     auto &rule_ref_per_source = flow->data;
     stack.reserve(rule_ref_per_source.size() + 1);
     path.reserve(rule_ref_per_source.size() + 1);
+    // Start searching from the node on which a rule was changed
     stack.push_back(start);
     while (not stack.empty()) {
       auto n = stack.back();
       stack.pop_back();
+      // Get next hop for for PEC from router n
       auto rule_ref_per_source_iter = rule_ref_per_source.find(n);
+      // Check if we have reached a dead-end (i.e., no next hop)
       if (rule_ref_per_source_iter == rule_ref_per_source.end()) {
         if (path.empty()) {
           assert(stack.empty());
@@ -255,6 +259,7 @@ void find_loops(source_t start, const affected_flows_t &affected_flows,
       }
       auto rule_ref = rule_ref_per_source_iter->second;
       auto insert_result = seen.insert(n);
+      // Check if node was already seen
       if (not nopticon::ok(insert_result)) {
         assert(not path.empty());
         auto min_iter = std::min_element(path.begin(), path.end());
