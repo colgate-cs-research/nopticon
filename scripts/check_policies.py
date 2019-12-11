@@ -91,14 +91,19 @@ def main():
                 policy_edges[policy._flow].append(policy.edge())
 
         # Identify extra edges
+        print("Extras:")
         for flow in summary.get_flows():
+            first_edge_for_flow = True
             for edge in summary.get_edges(flow):
                 if flow not in policy_edges or edge not in policy_edges[flow]:
                     rank_result = get_edge_rank(summary, flow, edge)
                     if (rank_result[0] >= settings.threshold):
-                        print('Extra %s %s->%s %f %d %f' % (flow, edge[0],
-                            edge[1], rank_result[0], rank_result[1],
-                            rank_result[2]))
+                        if (first_edge_for_flow):
+                            print(flow)
+                            first_edge_for_flow = False
+                        edge_str = '%s -> %s' % (edge)
+                        print('\t%s (%.3f %4d %3.3f)' % (edge_str.ljust(50),
+                            rank_result[0], rank_result[1], rank_result[2]))
 
 if __name__ == '__main__':
     main()
