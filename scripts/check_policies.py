@@ -32,7 +32,7 @@ def main():
     arg_parser.add_argument('-s','--summary', dest='summary_path',
             action='store', required=True, help='Path to summary JSON file')
     arg_parser.add_argument('-p','--policies', dest='policies_path',
-            action='store', required=True, help='Path to policies JSON file')
+            action='store', help='Path to policies JSON file')
     arg_parser.add_argument('-e','--extras', dest='extras', action='store_true',
             help='Output edges that do not correspond to any policies')
     arg_parser.add_argument('-c', '--coerce', dest='coerce',
@@ -53,9 +53,12 @@ def main():
     summary = nopticon.ReachSummary(summary_json)
 
     # Load policies
-    with open(settings.policies_path, 'r') as pf:
-        policies_json = pf.read()
-    policies = nopticon.parse_policies(policies_json)
+    if (settings.policies_path is not None):
+        with open(settings.policies_path, 'r') as pf:
+            policies_json = pf.read()
+        policies = nopticon.parse_policies(policies_json)
+    else:
+        policies = []
 
     # Coerce path preference policies to reachability policy
     if (settings.coerce):
